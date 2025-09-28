@@ -282,8 +282,6 @@ namespace Snake
 
             snakePositions[0] += currentDirection;
 
-            collisionTest();
-
             for (int i = 0; i < snake.Count; i++)
             {
                 if (snakePositions[i].X == -1) snakePositions[i] = ((gridW - 1), snakePositions[i].Y);
@@ -296,6 +294,8 @@ namespace Snake
                     snakePositions[i].Y * unit
                     );
             }
+
+            collisionTest();
 
             if (directionQ.Count != 0)
             directionQ.RemoveAt(0);
@@ -347,7 +347,7 @@ namespace Snake
                 Vector2i lastDirection = currentDirection;
                 if (directionQ.Count != 0)
                 lastDirection = directionQ[directionQ.Count - 1];
-                Vector2i nextDirection = currentDirection;
+                Vector2i nextDirection = lastDirection;
 
                 switch (e.Code)
                 {
