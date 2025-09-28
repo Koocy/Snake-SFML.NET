@@ -1,0 +1,4 @@
+C:\Users\ahmet\Desktop\VS17 projeleri\Snake\Snake\obj\Release\Snake.csproj.Snake.exe.config
+C:\Users\ahmet\Desktop\VS17 projeleri\Snake\Snake\obj\Release\Snake.csproj.CoreCompileInputs.cache
+C:\Users\ahmet\Desktop\VS17 projeleri\Snake\Snake\obj\Release\Snake.exe
+C:\Users\ahmet\Desktop\VS17 projeleri\Snake\Snake\obj\Release\Snake.pdb
