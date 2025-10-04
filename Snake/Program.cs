@@ -113,6 +113,7 @@ namespace Snake
             applePosition = new Vector2i(appleX, appleY);
 
             if (apple == null)
+            {
                 apple = new CircleShape(appleRadius)
                 {
                     FillColor = Color.Red,
@@ -120,9 +121,9 @@ namespace Snake
                     OutlineThickness = 1,
                     Position = ((applePosition.X * unit) + 12, (applePosition.Y * unit) + 12)
                 };
+                toDraw.Add(apple);
+            }
             else apple.Position = ((applePosition.X * unit) + 12, (applePosition.Y * unit) + 12);
-
-            toDraw.Add(apple);
         }
 
         static RenderWindow settingsMenu;
