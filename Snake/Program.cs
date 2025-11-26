@@ -10,7 +10,7 @@ namespace Snake
 {
     class Game
     {
-        static bool bot = true;
+        static bool bot = false;
         const int snakeStartLength = 3;
         const int snakeStartY = 2;
 
@@ -109,6 +109,7 @@ namespace Snake
             else if (!gameStarted)
             {
                 moveDelay = newMoveDelay;
+                bot = settingsMenu.botCB.Checked;
                 settingsMenu.Hide();
                 game.Run();
             }
