@@ -8,9 +8,18 @@ using System.Windows.Forms;
 
 namespace Snake
 {
-    class Program
+    class Game
     {
-        static Program Game = new Program();
+        static bool bot = true;
+        const int snakeStartLength = 3;
+        const int snakeStartY = 2;
+
+        public static Vector2i applePosition;
+        public static List<Vector2i> snakePositions;
+        public const int gridW = 16;
+        public const int gridH = 9;
+
+        static Game game = new Game();
         static bool gameStarted = false;
 
         [DllImport("user32.dll")]
@@ -22,19 +31,17 @@ namespace Snake
         static RenderWindow GameWindow;
         static SettingsMenu settingsMenu;
         Clock clock;
-        List<Drawable> toDraw;
+        static List<Drawable> toDraw;
 
-        static float moveDelay = 0.4f;
+        public static float moveDelay = 0.4f;
         static float newMoveDelay = moveDelay;
         float timer;
 
-        CircleShape apple;
-        Vector2i applePosition;
+        static CircleShape apple;
 
-        List<RectangleShape> snake;
-        List<Vector2i> snakePositions;
+        static List<RectangleShape> snake;
 
-        Vector2i currentDirection;
+        static Vector2i currentDirection;
         List<Vector2i> directionQ;
 
         bool pause;
@@ -42,8 +49,6 @@ namespace Snake
 
         const int tileSize = 40;
         const int appleRadius = tileSize / 4;
-        const int gridW = 16;
-        const int gridH = 9;
 
         const uint virtualWidth = tileSize * gridW;
         const uint virtualHeight = tileSize * gridH;
@@ -70,25 +75,25 @@ namespace Snake
             if (gameStarted)
             {
                 settingsMenu.Hide();
-                Game.pause = false;
+                game.pause = false;
             }
             else Application.Exit();
         }
-
+                     
         private static void RightArrow_Click(object sender, EventArgs e)
         {
             if (settingsMenu.speed.Text == "Medium") { newMoveDelay -= 0.1f; settingsMenu.speed.Text = "Fast"; return; }
             else if (settingsMenu.speed.Text == "Slow") { newMoveDelay -= 0.1f; settingsMenu.speed.Text = "Medium"; return; }
             else if (settingsMenu.speed.Text == "Fast") { newMoveDelay += 0.2f; settingsMenu.speed.Text = "Slow"; return; }
         }
-
+                     
         private static void LeftArrow_Click(object sender, EventArgs e)
         {
             if (settingsMenu.speed.Text == "Medium") { newMoveDelay += 0.1f; settingsMenu.speed.Text = "Slow"; return; }
             else if (settingsMenu.speed.Text == "Slow") { newMoveDelay -= 0.2f; settingsMenu.speed.Text = "Fast"; return; }
             else if (settingsMenu.speed.Text == "Fast") { newMoveDelay += 0.1f; settingsMenu.speed.Text = "Medium"; return; }
         }
-
+                     
         private static void StartButton_Click(object sender, EventArgs e)
         {
             if (gameStarted)
@@ -96,53 +101,39 @@ namespace Snake
                 if (MessageBox.Show("Start new game?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
                 {
                     moveDelay = newMoveDelay;
+                    bot = settingsMenu.botCB.Checked;
                     settingsMenu.Hide();
-                    Game.RestartGame();
+                    game.RestartGame();
                 }
             }
             else if (!gameStarted)
             {
                 moveDelay = newMoveDelay;
                 settingsMenu.Hide();
-                Game.Run();
+                game.Run();
             }
         }
-
+                     
         private static void SettingsMenu_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
         {
             e.Handled = true;
-            e.SuppressKeyPress = true;
 
             switch (e.KeyCode)
             {
                 case Keys.Enter:
-                    if (gameStarted)
-                    {
-                        if (MessageBox.Show("Start new game?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
-                        {
-                            moveDelay = newMoveDelay;
-                            settingsMenu.Hide();
-                            Game.RestartGame();
-                        }
-                    }
-                    else if (!gameStarted)
-                    {
-                        moveDelay = newMoveDelay;
-                        settingsMenu.Hide();
-                        Game.Run();
-                    }
+                    StartButton_Click(new object(), new EventArgs());
+                    break;
+
+                case Keys.Escape:
+                    CloseButton_Click(new object(), new EventArgs());
                     break;
                 case Keys.A:
                 case Keys.Left:
-                    if (settingsMenu.speed.Text == "Medium") { newMoveDelay += 0.1f; settingsMenu.speed.Text = "Slow"; return; }
-                    else if (settingsMenu.speed.Text == "Slow") { newMoveDelay -= 0.2f; settingsMenu.speed.Text = "Fast"; return; }
-                    else if (settingsMenu.speed.Text == "Fast") { newMoveDelay += 0.1f; settingsMenu.speed.Text = "Medium"; return; }
+                    LeftArrow_Click(new object(), new EventArgs());
                     break;
                 case Keys.D:
                 case Keys.Right:
-                    if (settingsMenu.speed.Text == "Medium") { newMoveDelay -= 0.1f; settingsMenu.speed.Text = "Fast"; return; }
-                    else if (settingsMenu.speed.Text == "Slow") { newMoveDelay -= 0.1f; settingsMenu.speed.Text = "Medium"; return; }
-                    else if (settingsMenu.speed.Text == "Fast") { newMoveDelay += 0.2f; settingsMenu.speed.Text = "Slow"; return; }
+                    RightArrow_Click(new object(), new EventArgs());
                     break;
             }
         }
@@ -167,7 +158,7 @@ namespace Snake
         void MakeSnake()
         {
             Color fill;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < snakeStartLength; i++)
             {
                 if (i == 0) fill = Color.Black; else fill = Color.Cyan;
 
@@ -176,11 +167,11 @@ namespace Snake
                     FillColor = fill,
                     OutlineColor = Color.Black,
                     OutlineThickness = 2,
-                    Position = (tileSize * (2 - i), tileSize)
+                    Position = (tileSize * ((snakeStartLength-1) - i), tileSize * snakeStartY)
                 };
 
                 snake.Add(rect);
-                snakePositions.Add(new Vector2i((2 - i), 1));
+                snakePositions.Add(new Vector2i(((snakeStartLength-1) - i), snakeStartY));
                 toDraw.Add(rect);
             }
         }
@@ -190,7 +181,7 @@ namespace Snake
             toDraw = new List<Drawable>();
 
             text = new Text();
-            text.DisplayedString = "Press 'P' or Enter to start/unpause";
+            text.DisplayedString = "Press 'P' or Enter to start/unpause\nPress ESC anytime for settings menu";
             text.Font = Arial;
             text.CharacterSize = 20;
             text.Position = new Vector2f(0, 0);
@@ -218,8 +209,8 @@ namespace Snake
             applePosition = new Vector2i(0, 0);
         }
 
-        Random random = new Random();
-        void GenerateApple()
+        static Random random = new Random();
+        public static void GenerateApple()
         {
             int gridSize = gridW * gridH;
 
@@ -312,29 +303,57 @@ namespace Snake
 
         void StepSnake()
         {
+            if (bot)
+            {
+                if (directionQ.Count == 0)
+                {
+                    List<Vector2i> safePath = AI.SafePathToApple();
+                    if (safePath != null && safePath.Count > 1)
+                    {
+                        Vector2i next = safePath[1];
+                        Vector2i dir = new Vector2i(next.X - snakePositions[0].X, next.Y - snakePositions[0].Y);
+
+                        if (dir.X > 1) dir.X = -1;
+                        if (dir.X < -1) dir.X = 1;
+                        if (dir.Y > 1) dir.Y = -1;
+                        if (dir.Y < -1) dir.Y = 1;
+
+                        Vector2i lastDirection = currentDirection;
+                        if (directionQ.Count != 0) lastDirection = directionQ[directionQ.Count - 1];
+
+                        if (!(dir.X == -lastDirection.X && dir.Y == -lastDirection.Y))
+                        {
+                            if (directionQ.Count < 2)
+                                directionQ.Add(dir);
+                        }
+                    }
+                }
+            }
+
             if (directionQ.Count != 0)
-            currentDirection = directionQ[0];
+                    currentDirection = directionQ[0];
 
-            for (int i = snake.Count - 1; i > 0; i--)
-            {
-                snakePositions[i] = snakePositions[i - 1];
-            }
+                for (int i = snake.Count - 1; i > 0; i--)
+                {
+                    snakePositions[i] = snakePositions[i - 1];
+                }
 
-            snakePositions[0] += currentDirection;
+                snakePositions[0] += currentDirection;
 
-            for (int i = 0; i < snake.Count; i++)
-            {
-                if (snakePositions[i].X == -1) snakePositions[i] = new Vector2i((gridW - 1), snakePositions[i].Y);
-                else if (snakePositions[i].X == gridW) snakePositions[i] = new Vector2i(0, snakePositions[i].Y);
-                if (snakePositions[i].Y == -1) snakePositions[i] = new Vector2i(snakePositions[i].X, (gridH - 1));
-                else if (snakePositions[i].Y == gridH) snakePositions[i] = new Vector2i(snakePositions[i].X, 0);
-            }
+                for (int i = 0; i < snake.Count; i++)
+                {
+                    if (snakePositions[i].X == -1) snakePositions[i] = new Vector2i((gridW - 1), snakePositions[i].Y);
+                    else if (snakePositions[i].X == gridW) snakePositions[i] = new Vector2i(0, snakePositions[i].Y);
+                    if (snakePositions[i].Y == -1) snakePositions[i] = new Vector2i(snakePositions[i].X, (gridH - 1));
+                    else if (snakePositions[i].Y == gridH) snakePositions[i] = new Vector2i(snakePositions[i].X, 0);
+                }
 
-            CollisionTest();
+                CollisionTest();
+
+                if (directionQ.Count != 0)
+                    directionQ.RemoveAt(0);
+
             UpdateSnake();
-
-            if (directionQ.Count != 0)
-            directionQ.RemoveAt(0);
         }
 
         void UpdateSnake()
@@ -367,56 +386,60 @@ namespace Snake
 
         void CollisionTest()
         {
-            for (int i = 1; i < snakePositions.Count; i++)
-            {
-                if (snakePositions[0].X == snakePositions[i].X && snakePositions[0].Y == snakePositions[i].Y)
+                for (int i = 1; i < snakePositions.Count; i++)
                 {
-                    gameOver = true;
-                    pause = true;
-                    snake[0].FillColor = Color.Red;
+                    if (snakePositions[0].X == snakePositions[i].X && snakePositions[0].Y == snakePositions[i].Y)
+                    {
+                        gameOver = true;
+                        pause = true;
+                        snake[0].FillColor = Color.Red;
+                    }
                 }
-            }
 
-            if (snakePositions[0].X == applePosition.X && snakePositions[0].Y == applePosition.Y)
-            {
-                IncreaseSnakeLength();
-                GenerateApple();
-            }
+                if (snakePositions[0].X == applePosition.X && snakePositions[0].Y == applePosition.Y)
+                {
+                    IncreaseSnakeLength();
+                    GenerateApple();
+                }
+
         }
 
         void GameWindow_KeyPressed(object sender, SFML.Window.KeyEventArgs e)
         {
-            if (!gameOver && !pause && directionQ.Count < 3)
+            if (!bot)
             {
-                Vector2i lastDirection = currentDirection;
-                if (directionQ.Count != 0)
-                lastDirection = directionQ[directionQ.Count - 1];
-                Vector2i nextDirection = lastDirection;
-
-                switch (e.Code)
+                if (!gameOver && !pause && directionQ.Count < 3)
                 {
-                    case Keyboard.Key.W:
-                    case Keyboard.Key.Up:
-                        if (lastDirection.Y == 0) nextDirection = new Vector2i(0, -1);
-                        break;
+                    Vector2i lastDirection = currentDirection;
+                    if (directionQ.Count != 0)
+                        lastDirection = directionQ[directionQ.Count - 1];
+                    Vector2i nextDirection = lastDirection;
 
-                    case Keyboard.Key.A:
-                    case Keyboard.Key.Left:
-                        if (lastDirection.X == 0) nextDirection = new Vector2i(-1, 0);
-                        break;
+                    switch (e.Code)
+                    {
+                        case Keyboard.Key.W:
+                        case Keyboard.Key.Up:
+                            if (lastDirection.Y == 0) nextDirection = new Vector2i(0, -1);
+                            break;
 
-                    case Keyboard.Key.S:
-                    case Keyboard.Key.Down:
-                        if (lastDirection.Y == 0) nextDirection = new Vector2i(0, 1);
-                        break;
+                        case Keyboard.Key.A:
+                        case Keyboard.Key.Left:
+                            if (lastDirection.X == 0) nextDirection = new Vector2i(-1, 0);
+                            break;
 
-                    case Keyboard.Key.D:
-                    case Keyboard.Key.Right:
-                        if (lastDirection.X == 0) nextDirection = new Vector2i(1, 0);
-                        break;
+                        case Keyboard.Key.S:
+                        case Keyboard.Key.Down:
+                            if (lastDirection.Y == 0) nextDirection = new Vector2i(0, 1);
+                            break;
+
+                        case Keyboard.Key.D:
+                        case Keyboard.Key.Right:
+                            if (lastDirection.X == 0) nextDirection = new Vector2i(1, 0);
+                            break;
+                    }
+
+                    directionQ.Add(nextDirection);
                 }
-
-                directionQ.Add(nextDirection);
             }
 
             if (gameOver && e.Code == Keyboard.Key.R)

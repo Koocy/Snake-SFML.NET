@@ -11,6 +11,7 @@ namespace Snake
         public Button leftArrow;
         public Label speed;
         public Button rightArrow;
+        public CheckBox botCB;
 
         public SettingsMenu() : base()
         {
@@ -18,7 +19,6 @@ namespace Snake
 
             this.FormClosed += (s, e) => Environment.Exit(0);
 
-            this.ActiveControl = null;
             this.KeyPreview = true;
 
             startButton = new Button();
@@ -26,6 +26,7 @@ namespace Snake
             leftArrow = new Button();
             speed = new Label();
             rightArrow = new Button();
+            botCB = new CheckBox();
 
             this.ClientSize = new Size(800, 600);
             this.Text = "Settings";
@@ -58,6 +59,11 @@ namespace Snake
             speed.TextAlign = ContentAlignment.MiddleCenter;
             speed.Font = new Font(new FontFamily("Arial"), 12f);
 
+            botCB.Left = speed.Left;
+            botCB.Top = speed.Top - 10 - botCB.Size.Height;
+            botCB.Text = "Bot";
+            botCB.Font = new Font(new FontFamily("Arial"), 12f);
+
             leftArrow.TabStop = false;
             leftArrow.Size = new Size(40, 40);
             leftArrow.BackColor = Color.Cyan;
@@ -81,6 +87,7 @@ namespace Snake
             this.Controls.Add(leftArrow);
             this.Controls.Add(speed);
             this.Controls.Add(rightArrow);
+            this.Controls.Add(botCB);
         }
 
         protected override bool IsInputKey(Keys keyData)
