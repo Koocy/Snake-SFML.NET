@@ -1,0 +1,10 @@
+# Ignore bin and obj folders
+**/bin/
+**/obj/
+
+# Ignore Visual Studio temporary files
+.vs/
+
+# Add other file types you want to ignore, if necessary
+*.suo
+*.user
