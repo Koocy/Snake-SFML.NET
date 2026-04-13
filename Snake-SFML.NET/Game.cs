@@ -11,45 +11,43 @@ namespace Snake_SFML.NET
     public class Game
     {
         RenderWindow GameWindow;
-        
-        public bool bot = false;
-        const int snakeStartLength = 3;
-        const int snakeStartY = 3;
 
-        public Vector2i applePosition;
-        public List<Vector2i> snakePositions;
-        public const int gridW = 16;
-        public const int gridH = 9;
-
-        public bool gameStarted = false;
+        public const int gridW = 16, gridH = 9;
+        const int tileSize = 40;
+        const uint virtualWidth = tileSize * gridW;
+        const uint virtualHeight = tileSize * gridH;
+        const int appleRadius = tileSize / 4;
 
         Font Arial = new Font("ARIAL.TTF");
         Text text;
 
-        Stopwatch clock;
         List<Drawable> toDraw;
 
+        public SettingsMenu settingsMenu;
+
+        //-
+
+        public bool bot = false, gameStarted = false;
+
+        const int snakeStartLength = 3;
+        const int snakeStartY = 3;
+
+        Vector2i applePosition;
+        List<Vector2i> snakePositions;
+
+        Stopwatch clock;
         public float moveDelay = 0.4f, newMoveDelay = 0.4f;
         double timer;
 
         CircleShape apple;
-
         List<RectangleShape> snake;
 
         Vector2i currentDirection;
         List<Vector2i> directionQ;
 
-        bool pause;
-        bool firstPause = true;
-        bool gameOver;
+        bool pause, firstPause = true, gameOver;
 
-        const int tileSize = 40;
-        const int appleRadius = tileSize / 4;
-
-        const uint virtualWidth = tileSize * gridW;
-        const uint virtualHeight = tileSize * gridH;
-
-        public SettingsMenu settingsMenu;
+        static Random random = new Random();
 
         public Game()
         {
@@ -81,27 +79,6 @@ namespace Snake_SFML.NET
             GameWindow.KeyPressed += GameWindow_KeyPressed;
         }
 
-        void MakeSnake()
-        {
-            Color fill;
-            for (int i = 0; i < snakeStartLength; i++)
-            {
-                if (i == 0) fill = Color.Black; else fill = Color.Cyan;
-
-                RectangleShape rect = new RectangleShape(new Vector2f(tileSize, tileSize))
-                {
-                    FillColor = fill,
-                    OutlineColor = Color.Black,
-                    OutlineThickness = 2,
-                    Position = new Vector2f(tileSize * ((snakeStartLength-1) - i), tileSize * snakeStartY)
-                };
-
-                snake.Add(rect);
-                snakePositions.Add(new Vector2i(((snakeStartLength-1) - i), snakeStartY));
-                toDraw.Add(rect);
-            }
-        }
-
         void InitGame()
         {
             toDraw = new List<Drawable>();
@@ -123,6 +100,7 @@ namespace Snake_SFML.NET
 
             currentDirection = new Vector2i(1, 0);
             directionQ = new List<Vector2i>();
+            if (!bot)
             directionQ.Add(currentDirection);
 
             timer = 0.0f;
@@ -137,38 +115,30 @@ namespace Snake_SFML.NET
             applePosition = new Vector2i(0, 0);
         }
 
-        static Random random = new Random();
-        public void GenerateApple()
+        public void RestartGame()
         {
-            int gridSize = gridW * gridH;
+            toDraw.Clear();
 
-        start:
-            int appleX = random.Next(0, gridW);
-            int appleY = random.Next(0, gridH);
+            text.DisplayedString = "Press P or Enter to start/unpause";
+            toDraw.Add(text);
 
-            if (snake.Count < gridSize - 2)
-                if (appleX == snakePositions[0].X + currentDirection.X && appleY == snakePositions[0].Y + currentDirection.Y) goto start;
+            clock.Restart();
 
-            for (int i = 0; i < snakePositions.Count; i++)
-            {
-                if (appleX == snakePositions[i].X && appleY == snakePositions[i].Y)
-                    goto start;
-            }
+            snake.Clear();
+            snakePositions.Clear();
 
-            applePosition = new Vector2i(appleX, appleY);
+            directionQ.Clear();
+            currentDirection = new Vector2i(1, 0);
+            directionQ.Add(currentDirection);
 
-            if (apple == null)
-            {
-                apple = new CircleShape(appleRadius)
-                {
-                    FillColor = Color.Red,
-                    OutlineColor = Color.Black,
-                    OutlineThickness = 1,
-                    Position = new Vector2f((applePosition.X * tileSize) + appleRadius, (applePosition.Y * tileSize) + appleRadius)
-                };
-                toDraw.Add(apple);
-            }
-            else apple.Position = new Vector2f((applePosition.X * tileSize) + appleRadius, (applePosition.Y * tileSize) + appleRadius);
+            timer = 0.0f;
+            pause = true;
+            gameOver = false;
+
+            MakeSnake();
+
+            apple = null;
+            GenerateApple();
         }
 
         void GameLoop()
@@ -206,135 +176,6 @@ namespace Snake_SFML.NET
                     text.DisplayedString = "GAME OVER\nR to restart";
                 }
             }
-        }
-
-        public void RestartGame()
-        {
-            toDraw.Clear();
-
-            text.DisplayedString = "Press P or Enter to start/unpause";
-            toDraw.Add(text);
-
-            clock.Restart();
-
-            snake.Clear();
-            snakePositions.Clear();
-
-            directionQ.Clear();
-            currentDirection = new Vector2i(1, 0);
-            directionQ.Add(currentDirection);
-
-            timer = 0.0f;
-            pause = true;
-            gameOver = false;
-
-            MakeSnake();
-
-            apple = null;
-            GenerateApple();
-        }
-
-        void StepSnake()
-        {
-            if (bot)
-            {
-                if (directionQ.Count == 0)
-                {
-                    List<Vector2i> safePath = AI.SafePathToApple(new List<Vector2i>(snakePositions), new Vector2i(applePosition.X, applePosition.Y));
-                    if (safePath != null && safePath.Count > 1)
-                    {
-                        Vector2i next = safePath[1];
-                        Vector2i dir = new Vector2i(next.X - snakePositions[0].X, next.Y - snakePositions[0].Y);
-
-                        if (dir.X > 1) dir.X = -1;
-                        if (dir.X < -1) dir.X = 1;
-                        if (dir.Y > 1) dir.Y = -1;
-                        if (dir.Y < -1) dir.Y = 1;
-
-                        Vector2i lastDirection = currentDirection;
-                        if (directionQ.Count != 0) lastDirection = directionQ[directionQ.Count - 1];
-
-                        if (!(dir.X == -lastDirection.X && dir.Y == -lastDirection.Y))
-                        {
-                            if (directionQ.Count < 2)
-                                directionQ.Add(dir);
-                        }
-                    }
-                }
-            }
-
-            if (directionQ.Count != 0)
-                currentDirection = directionQ[0];
-
-            for (int i = snake.Count - 1; i > 0; i--)
-            {
-                snakePositions[i] = snakePositions[i - 1];
-            }
-
-            snakePositions[0] += currentDirection;
-
-            for (int i = 0; i < snake.Count; i++)
-            {
-                if (snakePositions[i].X == -1) snakePositions[i] = new Vector2i((gridW - 1), snakePositions[i].Y);
-                else if (snakePositions[i].X == gridW) snakePositions[i] = new Vector2i(0, snakePositions[i].Y);
-                if (snakePositions[i].Y == -1) snakePositions[i] = new Vector2i(snakePositions[i].X, (gridH - 1));
-                else if (snakePositions[i].Y == gridH) snakePositions[i] = new Vector2i(snakePositions[i].X, 0);
-            }
-
-            CollisionTest();
-
-            if (directionQ.Count != 0)
-                directionQ.RemoveAt(0);
-
-            UpdateSnake();
-        }
-
-        void UpdateSnake()
-        {
-            for (int i = 0; i < snake.Count; i++)
-                snake[i].Position = new Vector2f(
-                    snakePositions[i].X * tileSize,
-                    snakePositions[i].Y * tileSize);
-        }
-
-        void IncreaseSnakeLength()
-        {
-            Vector2i last = snakePositions[snakePositions.Count - 1];
-            Vector2i secondLast = snakePositions[snakePositions.Count - 2];
-            Vector2i tailDirection = last - secondLast;
-            Vector2i tailPosition = last + tailDirection;
-
-            RectangleShape rect = new RectangleShape(new Vector2f(tileSize, tileSize))
-            {
-                FillColor = Color.Cyan,
-                OutlineColor = Color.Black,
-                OutlineThickness = 2,
-                Position = new Vector2f(tailPosition.X * tileSize, tailPosition.Y * tileSize)
-            };
-
-            snake.Add(rect);
-            snakePositions.Add(tailPosition);
-            toDraw.Add(rect);
-        }
-
-        void CollisionTest()
-        {
-            for (int i = 1; i < snakePositions.Count; i++)
-            {
-                if (snakePositions[0].X == snakePositions[i].X && snakePositions[0].Y == snakePositions[i].Y)
-                {
-                    gameOver = true;
-                    pause = true;
-                    snake[0].FillColor = Color.Red;
-                }
-            }
-
-            if (snakePositions[0].X == applePosition.X && snakePositions[0].Y == applePosition.Y)
-            {
-                IncreaseSnakeLength();
-                GenerateApple();
-            }
-
         }
 
         void GameWindow_KeyPressed(object sender, SFML.Window.KeyEventArgs e)
@@ -408,6 +249,14 @@ namespace Snake_SFML.NET
             }
         }
 
+        void UpdateSnake()
+        {
+            for (int i = 0; i < snake.Count; i++)
+                snake[i].Position = new Vector2f(
+                    snakePositions[i].X * tileSize,
+                    snakePositions[i].Y * tileSize);
+        }
+
         void DrawGameWindow()
         {
             for (int i = toDraw.Count - 1; i >= 0; i--)
@@ -424,6 +273,161 @@ namespace Snake_SFML.NET
         private void CloseWindow(object sender, EventArgs e)
         {
             Environment.Exit(0);
+        }
+
+        //-
+
+        void MakeSnake()
+        {
+            Color fill;
+            for (int i = 0; i < snakeStartLength; i++)
+            {
+                if (i == 0) fill = Color.Black; else fill = Color.Cyan;
+
+                RectangleShape rect = new RectangleShape(new Vector2f(tileSize, tileSize))
+                {
+                    FillColor = fill,
+                    OutlineColor = Color.Black,
+                    OutlineThickness = 2,
+                    Position = new Vector2f(tileSize * ((snakeStartLength - 1) - i), tileSize * snakeStartY)
+                };
+
+                snake.Add(rect);
+                snakePositions.Add(new Vector2i(((snakeStartLength - 1) - i), snakeStartY));
+                toDraw.Add(rect);
+            }
+        }
+
+        void GenerateApple()
+        {
+            int gridSize = gridW * gridH;
+
+        start:
+            int appleX = random.Next(0, gridW);
+            int appleY = random.Next(0, gridH);
+
+            if (snake.Count < gridSize - 2)
+                if (appleX == snakePositions[0].X + currentDirection.X && appleY == snakePositions[0].Y + currentDirection.Y) goto start;
+
+            for (int i = 0; i < snakePositions.Count; i++)
+            {
+                if (appleX == snakePositions[i].X && appleY == snakePositions[i].Y)
+                    goto start;
+            }
+
+            applePosition = new Vector2i(appleX, appleY);
+
+            if (apple == null)
+            {
+                apple = new CircleShape(appleRadius)
+                {
+                    FillColor = Color.Red,
+                    OutlineColor = Color.Black,
+                    OutlineThickness = 1,
+                    Position = new Vector2f((applePosition.X * tileSize) + appleRadius, (applePosition.Y * tileSize) + appleRadius)
+                };
+                toDraw.Add(apple);
+            }
+            else apple.Position = new Vector2f((applePosition.X * tileSize) + appleRadius, (applePosition.Y * tileSize) + appleRadius);
+        }
+
+        void StepSnake()
+        {
+            if (bot)
+            {
+                if (directionQ.Count == 0)
+                {
+                    List<Vector2i> safePath = AI.SafePathToApple(new List<Vector2i>(snakePositions), new Vector2i(applePosition.X, applePosition.Y));
+                    if (safePath != null && safePath.Count > 1)
+                    {
+                        Vector2i next = safePath[1];
+                        Vector2i dir = new Vector2i(next.X - snakePositions[0].X, next.Y - snakePositions[0].Y);
+
+                        if (dir.X > 1) dir.X = -1;
+                        if (dir.X < -1) dir.X = 1;
+                        if (dir.Y > 1) dir.Y = -1;
+                        if (dir.Y < -1) dir.Y = 1;
+
+                        Vector2i lastDirection = currentDirection;
+                        if (directionQ.Count != 0) lastDirection = directionQ[directionQ.Count - 1];
+
+                        if (!(dir.X == -lastDirection.X && dir.Y == -lastDirection.Y))
+                        {
+                            if (directionQ.Count < 2)
+                                directionQ.Add(dir);
+                        }
+                    }
+                }
+            }
+
+            if (directionQ.Count != 0)
+                currentDirection = directionQ[0];
+
+            for (int i = snake.Count - 1; i > 0; i--)
+            {
+                snakePositions[i] = snakePositions[i - 1];
+            }
+
+            snakePositions[0] += currentDirection;
+
+            if (snakePositions[0].X < 0) 
+                snakePositions[0] = new Vector2i((gridW - 1), snakePositions[0].Y);
+
+            if (snakePositions[0].X >= gridW) 
+                snakePositions[0] = new Vector2i(0, snakePositions[0].Y);
+
+            if (snakePositions[0].Y < 0) 
+                snakePositions[0] = new Vector2i(snakePositions[0].X, (gridH - 1));
+
+            if (snakePositions[0].Y >= gridH) 
+                snakePositions[0] = new Vector2i(snakePositions[0].X, 0);
+
+            CollisionTest();
+
+            if (directionQ.Count != 0)
+                directionQ.RemoveAt(0);
+
+            UpdateSnake();
+        }
+
+        void IncreaseSnakeLength()
+        {
+            Vector2i last = snakePositions[snakePositions.Count - 1];
+            Vector2i secondLast = snakePositions[snakePositions.Count - 2];
+            Vector2i tailDirection = last - secondLast;
+            Vector2i tailPosition = last + tailDirection;
+
+            RectangleShape rect = new RectangleShape(new Vector2f(tileSize, tileSize))
+            {
+                FillColor = Color.Cyan,
+                OutlineColor = Color.Black,
+                OutlineThickness = 2,
+                Position = new Vector2f(tailPosition.X * tileSize, tailPosition.Y * tileSize)
+            };
+
+            snake.Add(rect);
+            snakePositions.Add(tailPosition);
+            toDraw.Add(rect);
+        }
+
+        void CollisionTest()
+        {
+            for (int i = 1; i < snakePositions.Count; i++)
+            {
+                if (snakePositions[0].X == snakePositions[i].X && snakePositions[0].Y == snakePositions[i].Y)
+                {
+                    gameOver = true;
+                    pause = true;
+                    snake[0].FillColor = Color.Red;
+                }
+            }
+
+            if (snakePositions[0].X == applePosition.X && snakePositions[0].Y == applePosition.Y)
+            {
+                IncreaseSnakeLength();
+                GenerateApple();
+            }
+
         }
     }
 }
